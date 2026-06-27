@@ -1,0 +1,205 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - game-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - game-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:29092 --list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  mysql-db:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-duocgame2026}
+    ports:
+      - "3307:3306"
+    networks:
+      - game-network
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent" ]
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  ms-user:
+    build: ./ms-user
+    container_name: ms-user
+    environment:
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-duocgame2026}
+      - JWT_SECRET=${JWT_SECRET:-change-this-super-secret-key-for-duoc-rpg-microservices-2026}
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./logs/ms-user:/app/log
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - game-network
+
+  ms-character:
+    build: ./ms-character
+    container_name: ms-character
+    environment:
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-duocgame2026}
+    ports:
+      - "8091:8091"
+    volumes:
+      - ./logs/ms-character:/app/log
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - game-network
+
+  ms-item:
+    build: ./ms-item
+    container_name: ms-item
+    environment:
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-duocgame2026}
+    ports:
+      - "8092:8092"
+    volumes:
+      - ./logs/ms-item:/app/log
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - game-network
+
+  ms-inventory:
+    build: ./ms-inventory
+    container_name: ms-inventory
+    environment:
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-duocgame2026}
+    ports:
+      - "8093:8093"
+    volumes:
+      - ./logs/ms-inventory:/app/log
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - game-network
+
+  ms-quest:
+    build: ./ms-quest
+    container_name: ms-quest
+    environment:
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-duocgame2026}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    ports:
+      - "8094:8094"
+    volumes:
+      - ./logs/ms-quest:/app/log
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - game-network
+
+  ms-currency:
+    build: ./ms-currency
+    container_name: ms-currency
+    environment:
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-duocgame2026}
+    ports:
+      - "8095:8095"
+    volumes:
+      - ./logs/ms-currency:/app/log
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - game-network
+
+  ms-shop:
+    build: ./ms-shop
+    container_name: ms-shop
+    environment:
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-duocgame2026}
+    ports:
+      - "8096:8096"
+    volumes:
+      - ./logs/ms-shop:/app/log
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - game-network
+
+  ms-combat:
+    build: ./ms-combat
+    container_name: ms-combat
+    environment:
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-duocgame2026}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    ports:
+      - "8097:8097"
+    volumes:
+      - ./logs/ms-combat:/app/log
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - game-network
+
+  ms-gateway:
+    build: ./ms-gateway
+    container_name: ms-gateway
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-change-this-super-secret-key-for-duoc-rpg-microservices-2026}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs/ms-gateway:/app/log
+    depends_on:
+      - ms-user
+      - ms-character
+      - ms-item
+      - ms-inventory
+      - ms-quest
+      - ms-currency
+      - ms-shop
+      - ms-combat
+    networks:
+      - game-network
+
+volumes:
+  mysql_data:
+
+networks:
+  game-network:
+    driver: bridge

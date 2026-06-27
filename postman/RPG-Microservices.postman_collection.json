@@ -1,0 +1,299 @@
+{
+  "info": {
+    "name": "RPG Microservices (DUOC)",
+    "description": "Colección para probar el ecosistema de microservicios a través del API Gateway (http://localhost:8080). Flujo: 1) Register, 2) Login (guarda el token automáticamente), 3) usar el resto de endpoints (el token Bearer se inyecta solo). Kafka está activo en ms-combat (topic: combat-results) y ms-quest (topic: quest-completed).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "userId", "value": "1" },
+    { "key": "combatId", "value": "1" },
+    { "key": "questId", "value": "1" },
+    { "key": "shopItemId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "ms-user (Auth)",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"ana@duoc.cl\",\n  \"username\": \"ana\",\n  \"password\": \"secreta123\"\n}" },
+            "url": "{{baseUrl}}/api/v1/user/register"
+          }
+        },
+        {
+          "name": "Login (guarda token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "if (j.token) {",
+                  "  pm.collectionVariables.set('token', j.token);",
+                  "  pm.collectionVariables.set('userId', j.userId);",
+                  "  console.log('Token guardado para userId ' + j.userId);",
+                  "}",
+                  "pm.test('login 200', function(){ pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"ana@duoc.cl\",\n  \"password\": \"secreta123\"\n}" },
+            "url": "{{baseUrl}}/api/v1/user/login"
+          }
+        },
+        { "name": "Listar usuarios", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/user/all" } },
+        { "name": "Usuario por ID", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/user/getUserId/{{userId}}" } },
+        { "name": "Usuario por email", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/user/getEmail/ana@duoc.cl" } },
+        { "name": "Usuarios por estado", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/user/getstatus/ACTIVE" } },
+        { "name": "Actualizar email", "request": { "method": "PUT", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"email\": \"ana2@duoc.cl\",\n  \"username\": \"ana\",\n  \"password\": \"secreta123\"\n}" }, "url": "{{baseUrl}}/api/v1/user/updateEmail/{{userId}}" } },
+        { "name": "Actualizar estado", "request": { "method": "PUT", "url": "{{baseUrl}}/api/v1/user/updateStatus/{{userId}}/BANNED" } },
+        { "name": "Eliminar usuario", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/user/{{userId}}" } }
+      ]
+    },
+    {
+      "name": "ms-item",
+      "item": [
+        {
+          "name": "Crear item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "if (j.id) { pm.collectionVariables.set('itemId', j.id); }"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Espada de Fuego\",\n  \"description\": \"Arma legendaria\",\n  \"price\": 100,\n  \"requiredLevel\": 1,\n  \"itemType\": \"WEAPON\",\n  \"rarity\": \"LEGENDARY\"\n}" }, "url": "{{baseUrl}}/api/v1/item" }
+        },
+        { "name": "Listar items", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/item" } },
+        { "name": "Item por ID", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/item/getItemId/1" } },
+        { "name": "Items por rareza", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/item/rarity/LEGENDARY" } },
+        { "name": "Items por tipo", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/item/type/WEAPON" } },
+        { "name": "Actualizar item", "request": { "method": "PUT", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Espada de Fuego+\",\n  \"description\": \"Mejorada\",\n  \"price\": 150,\n  \"requiredLevel\": 2,\n  \"itemType\": \"WEAPON\",\n  \"rarity\": \"LEGENDARY\"\n}" }, "url": "{{baseUrl}}/api/v1/item/1" } },
+        { "name": "Eliminar item", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/item/1" } }
+      ]
+    },
+    {
+      "name": "ms-currency",
+      "item": [
+        { "name": "Acreditar moneda", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"currencyType\": \"GOLD\",\n  \"amount\": 500\n}" }, "url": "{{baseUrl}}/api/v1/currency/add/{{userId}}" } },
+        { "name": "Acreditar GEMS", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"currencyType\": \"GEMS\",\n  \"amount\": 100\n}" }, "url": "{{baseUrl}}/api/v1/currency/add/{{userId}}" } },
+        { "name": "Descontar moneda", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"currencyType\": \"GOLD\",\n  \"amount\": 100\n}" }, "url": "{{baseUrl}}/api/v1/currency/deduct/{{userId}}" } },
+        { "name": "Saldos del usuario", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/currency/{{userId}}" } },
+        { "name": "Saldo por moneda", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/currency/{{userId}}/GOLD" } }
+      ]
+    },
+    {
+      "name": "ms-character",
+      "item": [
+        { "name": "Crear héroe base (admin)", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Aragorn\",\n  \"characterArchetype\": \"ATTACK\",\n  \"baseHealth\": 100,\n  \"baseAttack\": 50,\n  \"baseDefense\": 30,\n  \"defaultCosmeticItemId\": 1\n}" }, "url": "{{baseUrl}}/api/v1/character/admin/create" } },
+        { "name": "Listar héroes base", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/character" } },
+        { "name": "Desbloquear héroe para usuario", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"userId\": {{userId}},\n  \"baseCharacterId\": 1\n}" }, "url": "{{baseUrl}}/api/v1/character/unlock" } },
+        { "name": "Roster del usuario", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/character/roster/{{userId}}" } },
+        { "name": "Equipar item", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"userId\": {{userId}},\n  \"userCharacterId\": 1,\n  \"itemId\": 1,\n  \"slot\": \"WEAPON\"\n}" }, "url": "{{baseUrl}}/api/v1/character/equip" } }
+      ]
+    },
+    {
+      "name": "ms-inventory",
+      "item": [
+        { "name": "Agregar item al inventario", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"userId\": {{userId}},\n  \"itemId\": 1,\n  \"quantity\": 2\n}" }, "url": "{{baseUrl}}/api/v1/inventory/add" } },
+        { "name": "Consumir item", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"userId\": {{userId}},\n  \"itemId\": 1,\n  \"quantity\": 1\n}" }, "url": "{{baseUrl}}/api/v1/inventory/consume" } },
+        { "name": "Inventario del usuario", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inventory/getUserId/{{userId}}" } },
+        { "name": "Item específico", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inventory/user/{{userId}}/item/1" } },
+        { "name": "¿Tiene el item?", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inventory/user/{{userId}}/item/1/check" } }
+      ]
+    },
+    {
+      "name": "ms-shop",
+      "item": [
+        {
+          "name": "Crear listing (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "if (j && j.shopItemId) { pm.collectionVariables.set('shopItemId', j.shopItemId); }"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"itemId\": 1,\n  \"price\": 50,\n  \"currencyType\": \"GOLD\"\n}" }, "url": "{{baseUrl}}/api/v1/shop/admin/create" }
+        },
+        { "name": "Catálogo", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/shop/catalog" } },
+        {
+          "name": "Comprar (cross-service)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Compra exitosa', function(){ pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta contiene nombre del item', function(){",
+                  "  pm.expect(pm.response.text()).to.include('x');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"userId\": {{userId}},\n  \"shopItemId\": {{shopItemId}},\n  \"quantity\": 1\n}" }, "url": "{{baseUrl}}/api/v1/shop/purchase" }
+        }
+      ]
+    },
+    {
+      "name": "ms-quest (Kafka: topic quest-completed)",
+      "description": "Al completar una quest (progress delta == objectives), se publica un QuestCompletedEvent al topic Kafka 'quest-completed' con questId, userId, questTitle, goldReward y expReward.",
+      "item": [
+        {
+          "name": "Crear quest",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "if (j.id) { pm.collectionVariables.set('questId', j.id); console.log('questId guardado: ' + j.id); }",
+                  "pm.test('Quest creada', function(){ pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Matar goblins\",\n  \"description\": \"Derrota 3 goblins\",\n  \"questType\": \"SIDEQUEST\",\n  \"objective\": 3,\n  \"expReward\": 100,\n  \"coinReward\": 50\n}" }, "url": "{{baseUrl}}/api/v1/quest" }
+        },
+        { "name": "Listar quests", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/quest" } },
+        { "name": "Quest por ID", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/quest/{{questId}}" } },
+        {
+          "name": "Asignar quest a usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Quest asignada', function(){ pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/quest/{{questId}}/assign/{{userId}}" }
+        },
+        {
+          "name": "Progreso parcial (delta=1)",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/v1/quest/user/{{userId}}/quest/{{questId}}/progress?delta=1" }
+        },
+        {
+          "name": "Completar quest (delta=3) → publica Kafka",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Progreso actualizado', function(){ pm.response.to.have.status(200); });",
+                  "console.log('Se publicó QuestCompletedEvent al topic kafka: quest-completed');"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/v1/quest/user/{{userId}}/quest/{{questId}}/progress?delta=3" }
+        },
+        { "name": "Eliminar quest", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/quest/{{questId}}" } }
+      ]
+    },
+    {
+      "name": "ms-combat (Kafka: topic combat-results)",
+      "description": "Al ejecutar playCombat, se publica un CombatResultEvent al topic Kafka 'combat-results' con combatId, userId, enemy, result, experienceGained, coinsGained y currencyType.",
+      "item": [
+        {
+          "name": "Crear escenario de combate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "if (j.id) { pm.collectionVariables.set('combatId', j.id); console.log('combatId guardado: ' + j.id); }",
+                  "pm.test('Escenario creado 201', function(){ pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"enemy\": \"Dragón\",\n  \"maxParticipants\": 4,\n  \"experienceAwarded\": 200,\n  \"coinsAwarded\": 100,\n  \"currencyType\": \"GOLD\"\n}" }, "url": "{{baseUrl}}/api/v1/combats/setup" }
+        },
+        {
+          "name": "Asignar equipo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Equipo asignado', function(){ pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "[\n  \"Aragorn\"\n]" }, "url": "{{baseUrl}}/api/v1/combats/{{combatId}}/assign-team/{{userId}}" }
+        },
+        {
+          "name": "Jugar combate → publica Kafka",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "pm.test('Combate ejecutado', function(){ pm.response.to.have.status(200); });",
+                  "pm.test('Resultado es VICTORY o DEFEAT', function(){",
+                  "  pm.expect(j.result).to.be.oneOf(['VICTORY', 'DEFEAT']);",
+                  "});",
+                  "console.log('CombatResultEvent publicado al topic kafka: combat-results. Resultado: ' + j.result);"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/combats/{{combatId}}/play" }
+        },
+        { "name": "Listar combates", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/combats" } }
+      ]
+    },
+    {
+      "name": "Casos de error (validación HTTP)",
+      "item": [
+        { "name": "401 - sin token", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/api/v1/user/all" } },
+        { "name": "404 - usuario inexistente", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/user/getUserId/99999" } },
+        { "name": "409 - email duplicado", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"email\": \"ana@duoc.cl\",\n  \"username\": \"otra\",\n  \"password\": \"x123\"\n}" }, "url": "{{baseUrl}}/api/v1/user/register" } },
+        { "name": "400 - validación de campos", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"email\": \"no-es-email\",\n  \"username\": \"\",\n  \"password\": \"\"\n}" }, "url": "{{baseUrl}}/api/v1/user/register" } },
+        { "name": "400 - compra cantidad 0", "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{\n  \"userId\": {{userId}},\n  \"shopItemId\": 1,\n  \"quantity\": 0\n}" }, "url": "{{baseUrl}}/api/v1/shop/purchase" } },
+        { "name": "404 - quest inexistente", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/quest/99999" } },
+        { "name": "404 - combate inexistente", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/combats/99999/play" } }
+      ]
+    }
+  ]
+}

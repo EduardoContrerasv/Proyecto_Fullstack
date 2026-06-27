@@ -1,0 +1,19 @@
+CREATE DATABASE IF NOT EXISTS db_user;
+CREATE DATABASE IF NOT EXISTS db_character;
+CREATE DATABASE IF NOT EXISTS db_combat;
+CREATE DATABASE IF NOT EXISTS db_quest;
+CREATE DATABASE IF NOT EXISTS db_shop;
+CREATE DATABASE IF NOT EXISTS db_item;
+CREATE DATABASE IF NOT EXISTS db_currency;
+CREATE DATABASE IF NOT EXISTS db_inventory;
+
+GRANT ALL PRIVILEGES ON db_user.* TO 'root'@'%';
+GRANT ALL PRIVILEGES ON db_character.* TO 'root'@'%';
+GRANT ALL PRIVILEGES ON db_combat.* TO 'root'@'%';
+GRANT ALL PRIVILEGES ON db_quest.* TO 'root'@'%';
+GRANT ALL PRIVILEGES ON db_shop.* TO 'root'@'%';
+GRANT ALL PRIVILEGES ON db_item.* TO 'root'@'%';
+GRANT ALL PRIVILEGES ON db_currency.* TO 'root'@'%';
+GRANT ALL PRIVILEGES ON db_inventory.* TO 'root'@'%';
+
+FLUSH PRIVILEGES;
